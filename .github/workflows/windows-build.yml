@@ -1,0 +1,42 @@
+name: build-windows
+
+# Berik must be packaged on Windows (PyInstaller cannot cross-build from macOS).
+# This runner pip-installs the deps, builds the onedir bundle, and uploads a portable ZIP
+# that a user can unzip anywhere in their user folder and run — no installer, no admin.
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build (onedir)
+        run: pyinstaller build/app.spec --noconfirm
+
+      # - name: Sign (optional — needs a code-signing cert in repo secrets)
+      #   run: |
+      #     & "signtool" sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
+      #       /f cert.pfx /p "${{ secrets.CERT_PASSWORD }}" dist\Berik\Berik.exe
+
+      - name: Package portable ZIP
+        run: Compress-Archive -Path dist\Berik\* -DestinationPath Berik-win64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Berik-win64
+          path: Berik-win64.zip

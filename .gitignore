@@ -1,0 +1,16 @@
+# Build output
+build/__pycache__/
+dist/
+*.spec.bak
+__pycache__/
+*.pyc
+
+# Test / QA artifacts
+tests/_out/
+tests/_qa/
+tests/_qa_out/
+tests/_qa_*.json
+
+# Heavy IFC / Excel never committed
+*.ifc
+Beriket/

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Berik</title>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+
+<!-- ===================== PROGRESS OVERLAY ===================== -->
+<div id="overlay" class="overlay" aria-hidden="true">
+  <div class="overlay-card">
+    <div class="overlay-spinner">
+      <svg viewBox="0 0 50 50" width="46" height="46">
+        <circle class="ovl-track" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+        <circle class="ovl-arc" cx="25" cy="25" r="20" fill="none" stroke-width="4"
+                stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="94"></circle>
+      </svg>
+    </div>
+    <div class="overlay-text">
+      <div id="overlay-msg" class="overlay-msg">Arbeider …</div>
+      <div class="overlay-bar"><div id="overlay-fill" class="overlay-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== INLINE ERROR BANNER ===================== -->
+<div id="banner" class="banner" role="alert" hidden>
+  <span class="banner-ico" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2 1 21h22L12 2zm0 6v6m0 3v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </span>
+  <span id="banner-text" class="banner-text"></span>
+  <button id="banner-close" class="banner-close" aria-label="Lukk">&times;</button>
+</div>
+
+<main id="app">
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 1 — LAST INN -->
+  <!-- ============================================================ -->
+  <section id="screen-load" class="screen is-active" data-screen="load">
+    <div class="load-hero">
+      <img class="load-logo" src="./assets/rejlers-logo-white.png" alt="Rejlers" />
+      <h1 class="load-title">Berik</h1>
+      <p class="load-tagline">Fra Excel til beriket IFC. Lokalt, trygt, ditt eget.</p>
+    </div>
+
+    <div class="load-body">
+      <div class="dropzones">
+        <!-- Excel -->
+        <button id="dz-excel" class="dropzone" type="button">
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 4h11l5 5v11a0 0 0 0 1 0 0H4a0 0 0 0 1 0 0V4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 4v5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12.5l3 4m0-4l-3 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <div class="dz-label">Utstyrsliste (Excel)</div>
+          <div class="dz-hint">Klikk for å velge fil</div>
+          <div id="excel-chosen" class="dz-chosen" hidden></div>
+        </button>
+
+        <!-- IFC -->
+        <button id="dz-ifc" class="dropzone" type="button">
+          <div class="dz-icon">
+            <svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7l9 5 9-5M12 12v10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="dz-label">IFC-modeller</div>
+          <div class="dz-hint">Klikk for å velge filer · <span id="ifc-folder-link" class="dz-sublink" role="link" tabindex="0">Velg mappe</span></div>
+          <div id="ifc-count" class="dz-chosen" hidden></div>
+        </button>
+      </div>
+
+      <ul id="ifc-list" class="ifc-list" hidden></ul>
+
+      <!-- Advanced -->
+      <div class="adv">
+        <button id="adv-toggle" class="adv-toggle" type="button" aria-expanded="false">
+          <span class="adv-chev" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          Avansert: valider mot fasit
+        </button>
+        <div id="adv-panel" class="adv-panel" hidden>
+          <p class="adv-desc">Sammenlign Beriks resultat mot en referansefil for å bekrefte at verdiene stemmer eksakt.</p>
+          <button id="answer-key-btn" class="btn btn-ghost btn-sm" type="button">Velg fasitfil</button>
+          <span id="answer-key-name" class="adv-keyname" hidden></span>
+        </div>
+      </div>
+
+      <div class="load-actions">
+        <a id="mapping-link" class="textlink" role="link" tabindex="0" hidden>Vis kolonnekartlegging</a>
+        <button id="analyze-btn" class="btn btn-primary btn-lg" type="button" disabled>
+          Analyser
+          <span class="btn-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+    </div>
+
+    <footer class="load-footer">Bygget av GRAIL for Rejlers · v<span id="ver-load">—</span></footer>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 2 — KARTLEGGING -->
+  <!-- ============================================================ -->
+  <section id="screen-mapping" class="screen" data-screen="mapping">
+    <header class="topbar">
+      <button class="topbar-back" id="map-back" type="button">
+        <span aria-hidden="true">←</span> Tilbake
+      </button>
+      <img class="topbar-logo" src="./assets/rejlers-logo.png" alt="Rejlers" />
+    </header>
+
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2 class="h2">Kartlegging</h2>
+        <p id="map-note" class="muted">Berik leste kartleggingen automatisk.</p>
+      </div>
+
+      <div class="keycard">
+        <div class="keycard-label">Nøkkel for kobling</div>
+        <div class="keycard-value">
+          <span class="lock" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+          <span id="map-key">—</span>
+        </div>
+        <div class="keycard-hint">Låst — dette er taggen som kobler Excel-rad til objekt.</div>
+      </div>
+
+      <div id="map-groups" class="map-groups"></div>
+
+      <div class="sheet-actions">
+        <button id="map-apply" class="btn btn-primary" type="button">Bruk kartlegging og analyser på nytt</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 3 — GJENNOMGÅ OG GODKJENN -->
+  <!-- ============================================================ -->
+  <section id="screen-review" class="screen" data-screen="review">
+    <header class="topbar">
+      <button class="topbar-back" id="rev-back" type="button">
+        <span aria-hidden="true">←</span> Tilbake
+      </button>
+      <div class="topbar-title">Gjennomgang</div>
+      <img class="topbar-logo" src="./assets/rejlers-logo.png" alt="Rejlers" />
+    </header>
+
+    <div class="review-scroll">
+      <!-- HERO: ring + headline -->
+      <div class="hero-panel">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 200 200" width="180" height="180">
+            <circle class="ring-track" cx="100" cy="100" r="86" fill="none" stroke-width="16"/>
+            <circle id="ring-arc" class="ring-arc" cx="100" cy="100" r="86" fill="none" stroke-width="16"
+                    stroke-linecap="round" stroke-dasharray="540.4" stroke-dashoffset="540.4"
+                    transform="rotate(-90 100 100)"/>
+          </svg>
+          <div class="ring-center">
+            <div id="ring-pct" class="ring-pct">0<span class="ring-pct-sym">%</span></div>
+            <div class="ring-cap">komplett</div>
+          </div>
+        </div>
+
+        <div class="hero-headline">
+          <div class="hero-big">
+            <span id="hero-enriched" class="hero-num" data-count="0">0</span>
+            <span class="hero-num-label">objekter beriket</span>
+          </div>
+          <div class="hero-sub" id="hero-of">av 0 taggede objekter</div>
+
+          <div class="hero-stats">
+            <div class="hstat"><div class="hstat-n" id="st-files" data-count="0">0</div><div class="hstat-l">filer</div></div>
+            <div class="hstat"><div class="hstat-n hstat-new" id="st-new" data-count="0">0</div><div class="hstat-l">nye verdier</div></div>
+            <div class="hstat"><div class="hstat-n hstat-over" id="st-over" data-count="0">0</div><div class="hstat-l">overskrives</div></div>
+            <div class="hstat"><div class="hstat-n" id="st-matched" data-count="0">0</div><div class="hstat-l">Excel-rader matchet</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PER-FILE -->
+      <div class="card">
+        <h3 class="card-h">Slik fordeler det seg</h3>
+        <div class="table-wrap">
+          <table class="dtable" id="file-table">
+            <thead>
+              <tr>
+                <th>Fil</th><th>Schema</th><th class="num">Tagget / totalt</th><th class="num">Matchet</th>
+                <th class="num">Beriket</th><th class="num">1:mange</th>
+              </tr>
+            </thead>
+            <tbody id="file-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RECONCILIATION -->
+      <div class="recon-grid">
+        <div class="card recon-card">
+          <button class="recon-head" data-recon="excel" type="button" aria-expanded="false">
+            <span class="recon-title">Excel-rader uten objekt</span>
+            <span id="recon-excel-badge" class="count-badge">0</span>
+            <span class="recon-chev" aria-hidden="true">▾</span>
+          </button>
+          <div id="recon-excel-other" class="recon-other muted"></div>
+          <div class="recon-body" hidden>
+            <input type="search" class="search" id="recon-excel-search" placeholder="Søk i tagger …" />
+            <ul class="scroll-list" id="recon-excel-list"></ul>
+          </div>
+        </div>
+
+        <div class="card recon-card">
+          <button class="recon-head" data-recon="ifc" type="button" aria-expanded="false">
+            <span class="recon-title">Objekter uten Excel-rad</span>
+            <span id="recon-ifc-badge" class="count-badge">0</span>
+            <span class="recon-chev" aria-hidden="true">▾</span>
+          </button>
+          <div class="recon-body" hidden>
+            <input type="search" class="search" id="recon-ifc-search" placeholder="Søk i objekter …" />
+            <ul class="scroll-list" id="recon-ifc-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- HEALTH -->
+      <div class="card">
+        <h3 class="card-h">Datakvalitet</h3>
+        <div id="health-chips" class="chip-row"></div>
+        <div id="health-detail" class="health-detail" hidden>
+          <div class="health-detail-head">
+            <span id="health-detail-title" class="health-detail-title"></span>
+            <button id="health-detail-close" class="health-detail-close" type="button" aria-label="Lukk">&times;</button>
+          </div>
+          <input type="search" class="search" id="health-search" placeholder="Søk …" />
+          <ul class="scroll-list" id="health-list"></ul>
+        </div>
+      </div>
+
+      <!-- CHANGES -->
+      <div class="card">
+        <div class="changes-head">
+          <h3 class="card-h">Endringer som skrives</h3>
+          <span id="changes-count" class="muted"></span>
+        </div>
+        <p class="muted changes-legend">
+          <span class="dot dot-new"></span> ny verdi
+          <span class="dot dot-over"></span> overskriver eksisterende
+        </p>
+        <input type="search" class="search" id="changes-search" placeholder="Søk i tagger eller egenskaper …" />
+        <ul class="scroll-list scroll-list-tall" id="changes-list"></ul>
+      </div>
+    </div>
+
+    <!-- STICKY SIGN-OFF -->
+    <div class="signoff">
+      <div class="signoff-left">
+        <div class="signoff-field">
+          <label for="approver" class="signoff-label">Godkjent av</label>
+          <input type="text" id="approver" class="signoff-input" placeholder="Navnet ditt" autocomplete="off" />
+        </div>
+        <button id="outdir-btn" class="btn btn-ghost btn-sm" type="button">Velg utdatamappe</button>
+        <span id="outdir-path" class="outdir-path muted" hidden></span>
+      </div>
+      <div class="signoff-right">
+        <div class="signoff-reassure muted">Originalfilene røres ikke. Berik skriver nye _beriket-kopier.</div>
+        <button id="commit-btn" class="btn btn-primary btn-lg" type="button" disabled>
+          Godkjenn og skriv <span id="commit-n">0</span> objekter
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SCREEN 4 — FERDIG -->
+  <!-- ============================================================ -->
+  <section id="screen-done" class="screen" data-screen="done">
+    <div class="done-wrap">
+      <div class="done-check">
+        <svg viewBox="0 0 80 80" width="80" height="80">
+          <circle class="done-circle" cx="40" cy="40" r="36" fill="none" stroke-width="4"/>
+          <path class="done-tick" d="M25 41l11 11 19-23" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 id="done-title" class="done-title">Beriket 0 objekter i 0 filer.</h2>
+      <div id="done-validation" class="done-badge" hidden></div>
+
+      <div class="done-files card">
+        <h3 class="card-h">Skrevne filer</h3>
+        <ul id="done-file-list" class="done-file-list"></ul>
+      </div>
+
+      <div class="done-actions">
+        <button id="done-openfolder" class="btn btn-primary" type="button">Åpne utdatamappe</button>
+        <button id="done-report" class="btn btn-ghost" type="button">Åpne QC-rapport</button>
+        <button id="done-xlsx" class="btn btn-ghost" type="button">Åpne datarapport</button>
+        <button id="done-new" class="btn btn-ghost" type="button">Ny kjøring</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="./app.js"></script>
+</body>
+</html>

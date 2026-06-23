@@ -1,0 +1,5 @@
+# Berik runtime dependencies
+ifcopenshell>=0.8.0      # IFC read/write/index, IDS validation, BCF
+openpyxl>=3.1            # read .xlsm, write the QC Excel report
+pywebview>=5.0           # native window hosting the HTML/CSS/JS UI (WebView2 on Windows)
+ifctester>=0.8.0         # IDS acceptance gate (drop-in project requirements) [optional feature]
