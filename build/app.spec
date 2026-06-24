@@ -11,13 +11,21 @@ ROOT = pathlib.Path(SPECPATH).parent          # project root (build/ is one leve
 ic_datas, ic_bin, ic_hidden = collect_all("ifcopenshell")
 it_datas, it_bin, it_hidden = collect_all("ifctester")     # IDS gate (optional feature)
 
-datas = ic_datas + it_datas + collect_data_files("lark") + [
+# pywebview's Windows backend loads the UI through WinForms via pythonnet, whose
+# native .NET loader (Python.Runtime.dll + clr_loader's shim DLLs) PyInstaller's
+# import analysis does not reliably collect. Pull them in fully so the .NET loader
+# path is deterministic on every machine, not just the build runner.
+pn_datas, pn_bin, pn_hidden = collect_all("pythonnet")
+cl_datas, cl_bin, cl_hidden = collect_all("clr_loader")
+
+datas = ic_datas + it_datas + pn_datas + cl_datas + collect_data_files("lark") + [
     (str(ROOT / "berik" / "ui"), "berik/ui"),               # the HTML/CSS/JS + logo assets
 ]
-binaries = ic_bin + it_bin
-hiddenimports = ic_hidden + it_hidden + [
+binaries = ic_bin + it_bin + pn_bin + cl_bin
+hiddenimports = ic_hidden + it_hidden + pn_hidden + cl_hidden + [
     "ifcopenshell_wrapper", "lark",
     "openpyxl", "openpyxl.cell._writer",
+    "clr", "clr_loader", "pythonnet",
 ]
 
 block_cipher = None

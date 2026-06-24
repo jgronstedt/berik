@@ -10,12 +10,62 @@ Ship:         bundled with PyInstaller (see build/app.spec) on a Windows runner.
 """
 from __future__ import annotations
 import json
+import os
 import pathlib
+import sys
 import threading
 import traceback
 
-import sys
-import webview
+
+# --- Windows launch hardening (must run BEFORE importing webview -> clr) ------
+# pywebview hosts the WebView2 UI through WinForms, which loads pythonnet's
+# Python.Runtime.dll via the .NET Framework. When Berik is downloaded as a ZIP
+# and extracted by Windows, every extracted file carries the "Mark-of-the-Web"
+# zone tag, and .NET Framework refuses to load a zone-tagged managed assembly --
+# the launch then dies with "Failed to resolve Python.Runtime.Loader.Initialize".
+# The user owns these files (Berik runs from their own folder), so we strip the
+# zone tag from our own bundle on startup. No admin rights, no user action.
+def _strip_mark_of_the_web() -> None:
+    if not (getattr(sys, "frozen", False) and os.name == "nt"):
+        return
+    roots = {
+        pathlib.Path(getattr(sys, "_MEIPASS", "") or "."),
+        pathlib.Path(sys.executable).resolve().parent,
+    }
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for f in root.rglob("*"):
+            try:
+                if f.is_file():
+                    os.remove(f"{f}:Zone.Identifier")   # delete the ADS if present
+            except OSError:
+                pass                                      # no tag, or can't touch -- fine
+
+
+def _fatal_launch_error(exc: Exception) -> None:
+    """Last-resort, human-readable dialog if the UI runtime still won't start."""
+    msg = (
+        "Berik klarte ikke a starte grensesnittet.\n\n"
+        "Dette skyldes nesten alltid at Windows har blokkert de nedlastede "
+        "filene.\n\nLosning: Hoyreklikk ZIP-filen FOR du pakker den ut -> "
+        "Egenskaper -> huk av «Fjern blokkering» / «Unblock» -> pakk ut "
+        "pa nytt og start Berik.\n\n"
+        f"Teknisk feil: {exc}"
+    )
+    try:
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, msg, "Berik", 0x10)  # MB_ICONERROR
+    except Exception:
+        print(msg, file=sys.stderr)
+    sys.exit(1)
+
+
+_strip_mark_of_the_web()
+try:
+    import webview
+except Exception as _exc:               # pythonnet / clr failed to initialise
+    _fatal_launch_error(_exc)
 
 from berik.engine import analyze as engine_analyze, commit as engine_commit
 from berik import report as report_mod
@@ -26,7 +76,7 @@ if getattr(sys, "frozen", False):
 else:
     APP_DIR = pathlib.Path(__file__).resolve().parent
 UI_DIR = APP_DIR / "berik" / "ui"
-VERSION = "1.0"
+VERSION = "1.1"
 
 
 def _js(window, fn, *args):
@@ -217,7 +267,14 @@ def main():
         background_color="#222754",
     )
     api.window = window
-    webview.start(debug=False)
+    # Pin the WebView2/EdgeChromium backend explicitly so the loader path is
+    # deterministic (no silent fallback to the legacy IE/mshtml renderer, which
+    # would mangle the modern HTML/CSS UI). If the runtime still can't start,
+    # show a human-readable dialog instead of a raw traceback.
+    try:
+        webview.start(gui="edgechromium", debug=False)
+    except Exception as exc:
+        _fatal_launch_error(exc)
 
 
 if __name__ == "__main__":
